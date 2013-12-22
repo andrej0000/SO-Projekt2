@@ -1,12 +1,14 @@
 #ifndef MSG_H
 #define MSG_H
 
-const long offset = 32768;
+#define MAXPID 32768
+#define MSGSIZE sizeof(long) * 4
+const long MSGQID = 1234L;
 
-struct t_msg {
+typedef struct msg {
 	/*
 	 * mtype - pid of client process which sends msg
-	 * or offset + pid of client process to whom msg is send
+	 * or MAXPID + pid of client process to whom msg is send
 	 */
 	long mtype;
 	/*
@@ -24,7 +26,7 @@ struct t_msg {
 	 * resource needed
 	 */
 	long res_quantity;
-};
+} t_msg;
 
 
 #endif

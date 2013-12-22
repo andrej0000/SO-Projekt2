@@ -10,7 +10,7 @@ ALL: serwer klient
 err.o: err.h err.c
 	$(CC) $(CCFLAGS) err.c -c -o err.o
 
-klient.o: err.o serwer.c msg.h
+klient.o: err.o klient.c msg.h
 	$(CC) $(CCFLAGS) klient.c -c -o klient.o
 
 klient: err.o msg.h klient.o
