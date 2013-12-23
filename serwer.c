@@ -1,3 +1,10 @@
+/*
+	Andrzej Sulecki
+	as320426
+	2gie zadanie zaliczeniowe
+	Systemy Operacyjne 2013/14Z
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,7 +47,6 @@ int interrupt;
 pthread_cond_t no_threads;
 pthread_mutex_t running_lock;
 t_resource * resources;
-//pthread_t * client_thread[MAXPID];
 pthread_attr_t client_thread_attr;
 
 /*
@@ -110,8 +116,6 @@ void exit_server(int sig){
 	if ((err = pthread_mutex_unlock(&(running_lock))) != 0)
 		syserr(err, "Thread mutex unlock fail\n");
 	
-
-
 	//Deleting message queue
 	if (debug)
 		printf("Server: exit\n");
@@ -121,8 +125,6 @@ void exit_server(int sig){
 		syserr(0,"Server: msgctl failed RMID\n");
 	if (msgctl(free_msg_qid, IPC_RMID, 0) == -1)
 		syserr(0,"Server: msgctl failed RMID\n");
-
-
 
 	if (debug)
 		printf("Server: msg queue destroyed\n");
@@ -144,38 +146,36 @@ void * client_cleanup(void * arg){
 		syserr(err, "Thread cleanup failed\n");
 	return 0;
 }
+
 void * client_kill_cleanup(void * arg){
 	kill (*(int *) arg, 15);
 	return 0;
-
 }
+
 void check_int(){
 	int err;
 	if ((err = pthread_mutex_lock(&(running_lock))) != 0)
 			syserr(err, "Thread mutex lock fail\n");
 	if (interrupt == 1){
 		running_threads --;
-		printf("Left %i\n", running_threads);
+		if (debug)
+			printf("Left %i\n", running_threads);
 
 		if ((err = pthread_mutex_unlock(&(running_lock))) != 0)
 			syserr(err, "Thread mutex unlock fail\n");
 		if (running_threads == 0)
 			pthread_cond_signal(&no_threads);
 
-
 		pthread_exit(PTHREAD_CANCELED);
 	}
 	if ((err = pthread_mutex_unlock(&(running_lock))) != 0)
-		syserr(err, "Thread mutex unlock fail\n");
-	
-
+		syserr(err, "Thread mutex unlock fail\n");	
 }
 
 void * client(void * m){
 	t_msg * msg = m;
 	int err;
 	int state;
-//	pthread_cond_t * pair_finish;
 	int * pair_finished;
 	
 	if ((err = pthread_mutex_lock(&(running_lock))) != 0)
@@ -215,9 +215,6 @@ void * client(void * m){
 
 	if (res->c_res_p == 0){
 		
-		//res->free_pair = malloc(sizeof(pthread_cond_t));
-		//if ((err = pthread_cond_init(res->free_pair, 0)) != 0)
-		//	syserr(err, "Free pair cond init fail\n");
 		res->partner_finished = calloc(sizeof(int), 1);
 
 
@@ -262,7 +259,6 @@ void * client(void * m){
 	}
 	
 	msg->mtype = msg->my_pid;
-	//pair_finish = res->free_pair;
 	pair_finished = res->partner_finished;
 	
 	if ((err = pthread_mutex_unlock(&(res->mutex))) != 0)
@@ -298,7 +294,6 @@ void * client(void * m){
 
 		if (debug)
 			printf("Zwolniono %i dostepnych %i\n", *pair_finished, res->free);
-		//free(pair_finished);
 	}
 
 	
@@ -381,7 +376,6 @@ int main(int argc, char ** argv){
 
 	if (debug)
 		printf("Server: initialization successful\n");
-//	int threads = 0;
 	while(interrupt != 1){
 		t_msg * msg = malloc(sizeof(t_msg));
 		if (debug)
@@ -401,12 +395,6 @@ int main(int argc, char ** argv){
 				msg->res_number, 
 				msg->res_quantity, 
 				msg->partner_pid);
-
 	}
-
-
-
-
-
-
+	return 0;
 }

@@ -1,3 +1,10 @@
+/*
+	Andrzej Sulecki
+	as320426
+	2gie zadanie zaliczeniowe
+	Systemy Operacyjne 2013/14Z
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -37,8 +44,6 @@ int main(int argc, char ** argv){
 	if ((acqu_msg_qid = msgget(ACQD_MSGQID, 0)) == -1)
 		syserr(0,"Klient: msgget failed in client\n");
 
-
-
 	t_msg msg;
 	msg.mtype = MAXPID + 1;
 	msg.my_pid = getpid();
@@ -54,7 +59,6 @@ int main(int argc, char ** argv){
 	msgrcv(acqu_msg_qid, &msg, MSGSIZE, getpid(), 0);
 
 	printf("%i %i %li %li\n", K, N, msg.my_pid, msg.partner_pid);
-
 
 	sleep(S);
 

@@ -1,3 +1,10 @@
+/*
+	Andrzej Sulecki
+	as320426
+	2gie zadanie zaliczeniowe
+	Systemy Operacyjne 2013/14Z
+*/
+
 #ifndef MSG_H
 #define MSG_H
 
