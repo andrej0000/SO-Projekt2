@@ -3,14 +3,22 @@
 
 #define MAXPID 32768
 #define MSGSIZE sizeof(long) * 4
-const long MSGQID = 1234L;
+const long QUER_MSGQID = 1234L;
+const long ACQD_MSGQID = 1235L;
+const long FREE_MSGQID = 1236L;
 
 typedef struct msg {
-	/*
-	 * mtype - pid of client process which sends msg
-	 * or MAXPID + pid of client process to whom msg is send
-	 */
+/*
+	MAXPID + 1 for sending to server only first query
+	Klient PID for sending to klient or thread
+*/
 	long mtype;
+
+/*
+	pid of klient from/to which is the msg
+*/
+
+	long my_pid;
 	/*
 	 * partner_pid - only when server sends msg - pid of another
 	 * process from pair to which we gave resources
