@@ -35,6 +35,10 @@ int acqu_msg_qid;
 
 int K;
 int N;
+int running_threads;
+int interrupt;
+pthread_cond_t no_threads;
+pthread_mutex_t running_lock;
 t_resource * resources;
 //pthread_t * client_thread[MAXPID];
 pthread_attr_t client_thread_attr;
@@ -79,6 +83,15 @@ void res_delete(t_resource * r){
 
 }
 
+void res_free(t_resource * r){
+	int err;
+	if ((err = pthread_cond_broadcast(&(r->res_q))) != 0)
+		syserr(err, "Server: broadcast failed\n");
+	
+	if ((err = pthread_cond_broadcast(&(r->res_p))) != 0)
+		syserr(err, "Server: broadcast failed\n");
+}
+
 void exit_server(int sig){
 	//Deleting message queue
 	if (debug)
@@ -114,13 +127,30 @@ void * client_cleanup(void * arg){
 	return 0;
 }
 
+void client_cond_wait(pthread_cond_t * cond, pthread_mutex_t * mut){
+	pthread_cond_wait(cond, mut);
+	if (interrupt == 1){
+		pthread_exit(PTHREAD_CANCELED);
+	}
+}
+
 void * client(void * m){
 	t_msg * msg = m;
 	int err;
 	int state;
 //	pthread_cond_t * pair_finish;
 	int * pair_finished;
-		
+	
+	if ((err = pthread_mutex_lock(&(running_lock))) != 0)
+		syserr(err, "Thread mutex lock fail\n");
+		running_threads ++;
+	if ((err = pthread_mutex_unlock(&(running_lock))) != 0)
+		syserr(err, "Thread mutex unlock fail\n");
+	
+
+	
+
+
 	if ((err = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &state)) != 0)
 		syserr(err, "Thread setcancelstate fail\n");
 
@@ -145,7 +175,7 @@ void * client(void * m){
 		res->c_res_q++;
 		if (debug)
 			printf("Czekamy na miejsce w parze %li\n", msg->my_pid);
-		pthread_cond_wait(&(res->res_q), &(res->mutex));
+		client_cond_wait(&(res->res_q), &(res->mutex));
 		res->c_res_q--;
 	}
 
@@ -166,7 +196,7 @@ void * client(void * m){
 
 		if (debug)
 			printf("Czekamy na drugiego w parze %li\n", msg->my_pid);
-		pthread_cond_wait(&(res->res_p), &(res->mutex));
+		client_cond_wait(&(res->res_p), &(res->mutex));
 		msg->partner_pid = res->pair_pid;
 	} else {
 		res->c_res_p++;
@@ -176,7 +206,7 @@ void * client(void * m){
 		if (res->pair_weight > res->free){
 			if (debug)
 				printf("Czekamy na wolne zasoby %li\n", msg->my_pid);
-			pthread_cond_wait(&(res->res_p), &(res->mutex));
+			client_cond_wait(&(res->res_p), &(res->mutex));
 		}
 		res->free -= res->pair_weight;
 		printf("Watek %ld przyznal %li+%li zasobow klientom %li %li, pozostalo %i zasobow\n",
@@ -246,6 +276,14 @@ void * client(void * m){
 
 
 	free(msg);
+	
+	if ((err = pthread_mutex_lock(&(running_lock))) != 0)
+		syserr(err, "Thread mutex lock fail\n");
+		running_threads --;
+	if ((err = pthread_mutex_unlock(&(running_lock))) != 0)
+		syserr(err, "Thread mutex unlock fail\n");
+	
+
 	pthread_exit(0);
 }
 
@@ -269,6 +307,12 @@ int main(int argc, char ** argv){
 
 	int i = 0;
 	//Initialization of resources
+
+	if ((err = pthread_mutex_init(&running_lock, 0)) != 0)
+		syserr(err,"Mutex init fail\n");
+	if ((err = pthread_cond_init(&no_threads, 0)) != -0)
+		syserr(err,"Cond init fail\n");
+		
 	resources = calloc(sizeof(t_resource), K);
 	for (i = 0; i < K; i++){
 		res_init(&resources[i], N);
@@ -277,8 +321,6 @@ int main(int argc, char ** argv){
 		printf("Server: resources initialized\n");
 
 	//Creating message queue
-//	if ((msg_qid = msgget(MSGQID, 0666 | IPC_CREAT | IPC_EXCL)) == -1)
-//		syserr(0,"Server: msgget failed\n");
 	if ((query_msg_qid = msgget(QUER_MSGQID, 0666 | IPC_CREAT | IPC_EXCL)) == -1)
 		syserr(0,"Klient: msgget failed in client\n");
 	if ((free_msg_qid = msgget(FREE_MSGQID, 0666 | IPC_CREAT | IPC_EXCL)) == -1)
@@ -304,11 +346,6 @@ int main(int argc, char ** argv){
 		printf("Server: initialization successful\n");
 //	int threads = 0;
 	while(1){
-		/*threads ++;
-		if (threads > 250){
-			sleep(10);
-			threads = 0;
-		}*/
 		t_msg * msg = malloc(sizeof(t_msg));
 		if (debug)
 			printf("Waiting for msg\n");
